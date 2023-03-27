@@ -1066,8 +1066,8 @@ void TebOptimalPlanner::AddEdgesVelocityObstacleRatio()
 
 void TebOptimalPlanner::AddEdgesPredictedCostmap()
 {
-  // std::cout<<" --- in the addedge fcn" << std::endl; 
-
+  // std::cout<<" --- in the addedge fcn" << std::endl; cfg_->optim.weight_static_costmap==0
+  ROS_DEBUG_THROTTLE(1, cfg_->optim.weight_static_costmap);
   Eigen::Matrix<double,1,1> information;
   information.fill(1);
 
@@ -1083,7 +1083,8 @@ void TebOptimalPlanner::AddEdgesPredictedCostmap()
     }
     else
     {
-      // std::cout << "Adding edge..." <<std::endl;
+      ROS_WARN_THROTTLE(1, "Adding edges costmap[2D]");
+
       EdgePredictedCostmap* edge = new EdgePredictedCostmap;
       edge->setVertex(0, teb_.PoseVertex(index));
       edge->setInformation(information);

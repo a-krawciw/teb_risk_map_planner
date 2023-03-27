@@ -222,6 +222,7 @@ void TebLocalPlannerROS::initialize(std::string name, tf2_ros::Buffer* tf, costm
 
 void TebLocalPlannerROS::PredictedCostmapCB(const nav_msgs::OccupancyGrid occupancy_grid)
 { 
+  ROS_WARN_THROTTLE(30, "2D Costmap working!");
 
 
   PredictedCostmap tmp; 
