@@ -1067,9 +1067,8 @@ void TebOptimalPlanner::AddEdgesVelocityObstacleRatio()
 void TebOptimalPlanner::AddEdgesPredictedCostmap()
 {
   // std::cout<<" --- in the addedge fcn" << std::endl; cfg_->optim.weight_static_costmap==0
-  ROS_DEBUG_THROTTLE(1, cfg_->optim.weight_static_costmap);
   Eigen::Matrix<double,1,1> information;
-  information.fill(1);
+  information.fill(10);
 
   // TODO: Find more optimal way. I am checking 2 times the interpolation here: to enter the function, and inside the function. Probabliy compute here the interpolated value and jacobi, and send it directly to the edge for g2o format compliance.
   for(int index = 1; index < teb_.sizePoses() - 1; ++index)
@@ -1083,7 +1082,8 @@ void TebOptimalPlanner::AddEdgesPredictedCostmap()
     }
     else
     {
-      ROS_WARN_THROTTLE(1, "Adding edges costmap[2D]");
+      ROS_WARN("Adding edges costmap[2D]");
+      ROS_WARN_STREAM_THROTTLE(1, "Costmap weight? " << cfg_->optim.weight_static_costmap);
 
       EdgePredictedCostmap* edge = new EdgePredictedCostmap;
       edge->setVertex(0, teb_.PoseVertex(index));
