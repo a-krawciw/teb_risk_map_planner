@@ -207,6 +207,7 @@ boost::shared_ptr<g2o::SparseOptimizer> TebOptimalPlanner::initOptimizer()
 bool TebOptimalPlanner::optimizeTEB(int iterations_innerloop, int iterations_outerloop, bool compute_cost_afterwards,
                                     double obst_cost_scale, double viapoint_cost_scale, bool alternative_time_cost)
 {
+  
   if (cfg_->optim.optimization_activate==false) 
     return false;
   
@@ -219,7 +220,7 @@ bool TebOptimalPlanner::optimizeTEB(int iterations_innerloop, int iterations_out
   //                 however, we have not tested this mode intensively yet, so we keep
   //                 the legacy fast mode as default until we finish our tests.
   bool fast_mode = !cfg_->obstacles.include_dynamic_obstacles;
-  
+  try{
   for(int i=0; i<iterations_outerloop; ++i)
   {
     if (cfg_->trajectory.teb_autosize)
@@ -251,6 +252,12 @@ bool TebOptimalPlanner::optimizeTEB(int iterations_innerloop, int iterations_out
     clearGraph();
     
     weight_multiplier *= cfg_->optim.weight_adapt_factor;
+  }
+  } catch(std::exception& e) {
+    ROS_ERROR_STREAM("Ros error on another thead: " << e.what());
+    clearGraph();
+
+    return false;
   }
   
 
@@ -329,8 +336,9 @@ bool TebOptimalPlanner::plan(const PoseSE2& start, const PoseSE2& goal, const ge
   {
     if (teb_.sizePoses() > 0
         && (goal.position() - teb_.BackPose().position()).norm() < cfg_->trajectory.force_reinit_new_goal_dist
-        && fabs(g2o::normalize_theta(goal.theta() - teb_.BackPose().theta())) < cfg_->trajectory.force_reinit_new_goal_angular) // actual warm start!
+        && fabs(g2o::normalize_theta(goal.theta() - teb_.BackPose().theta())) < cfg_->trajectory.force_reinit_new_goal_angular){
       teb_.updateAndPruneTEB(start, goal, cfg_->trajectory.min_samples);
+    } // actual warm start!
     else // goal too far away -> reinit
     {
       ROS_DEBUG("New goal: distance to existing goal is higher than the specified threshold. Reinitalizing trajectories.");
@@ -416,7 +424,7 @@ bool TebOptimalPlanner::optimizeGraph(int no_iterations,bool clear_after)
   
   if (!teb_.isInit() || teb_.sizePoses() < cfg_->trajectory.min_samples)
   {
-    ROS_WARN("optimizeGraph(): TEB is empty or has too less elements. Skipping optimization.");
+    ROS_WARN("optimizeGraph(): TEB is empty or has too few elements. Skipping optimization.");
     if (clear_after) clearGraph();
     return false;	
   }
@@ -718,7 +726,9 @@ void TebOptimalPlanner::AddEdgesDynamicObstacles(double weight_multiplier)
 
 void TebOptimalPlanner::AddEdgesViaPoints()
 {
-  if (cfg_->optim.weight_viapoint==0 || via_points_==NULL || via_points_->empty() )
+  float weight = teb_.getAccumulatedDistance() / 10.0;
+
+  if (cfg_->optim.weight_viapoint==0 || via_points_==NULL || via_points_->empty() || weight < 0.1)
     return; // if weight equals zero skip adding edges!
 
   int start_pose_idx = 0;
@@ -750,8 +760,10 @@ void TebOptimalPlanner::AddEdgesViaPoints()
         continue; // skip via points really close or behind the current robot pose
       }
     }
+    ROS_INFO_STREAM("Via point weight " << weight);
+    
     Eigen::Matrix<double,1,1> information;
-    information.fill(cfg_->optim.weight_viapoint);
+    information.fill(weight);
     
     EdgeViaPoint* edge_viapoint = new EdgeViaPoint;
     edge_viapoint->setVertex(0,teb_.PoseVertex(index));
@@ -1068,13 +1080,18 @@ void TebOptimalPlanner::AddEdgesPredictedCostmap()
 {
   // std::cout<<" --- in the addedge fcn" << std::endl; cfg_->optim.weight_static_costmap==0
   Eigen::Matrix<double,1,1> information;
-  information.fill(10);
+  information.fill(100.0);
 
   // TODO: Find more optimal way. I am checking 2 times the interpolation here: to enter the function, and inside the function. Probabliy compute here the interpolated value and jacobi, and send it directly to the edge for g2o format compliance.
   for(int index = 1; index < teb_.sizePoses() - 1; ++index)
   {
     double interpolation = 0;  
-    predictions_->interpolateCostmapValue(teb_.Pose(index), &interpolation);
+    try{
+      predictions_->interpolateCostmapValue(teb_.Pose(index), &interpolation);
+    } catch (...) {
+      ROS_ERROR("Interpolation of 2D costmap failed assume cost of 0");
+      interpolation = 0;
+    }
     if(interpolation < 1) // TODO: arbitrary threshold value.
     {
       // not adding edge: interpolation is arbitrarily low.
@@ -1082,8 +1099,7 @@ void TebOptimalPlanner::AddEdgesPredictedCostmap()
     }
     else
     {
-      ROS_WARN("Adding edges costmap[2D]");
-      ROS_WARN_STREAM_THROTTLE(1, "Costmap weight? " << cfg_->optim.weight_static_costmap);
+      ROS_WARN_STREAM_THROTTLE(1, "Costmap weight " << cfg_->optim.weight_static_costmap);
 
       EdgePredictedCostmap* edge = new EdgePredictedCostmap;
       edge->setVertex(0, teb_.PoseVertex(index));

@@ -68,10 +68,10 @@ void PredictedCostmap::interpolateCostmapValue(PoseSE2 pos, double *interpolatio
   PoseSE2 pos2(pos.x() + 0.5, pos.y() + 0.5, pos.theta());
   this->posToIndices(pos, &r2, &c2);
 
-  v00 = this->grid_[r2-1][c2-1];
-  v10 = this->grid_[r2-1][c2];
-  v01 = this->grid_[r2][c2-1];
-  v11 = this->grid_[r2][c2];
+  v00 = this->grid_.at(r2-1).at(c2-1);
+  v10 = this->grid_.at(r2-1).at(c2);
+  v01 = this->grid_.at(r2).at(c2-1);
+  v11 = this->grid_.at(r2).at(c2);
 
   tx = (pos.x() - this->grid_origin_x) / this->resolution_ + 0.5 - c2;
   ty = (pos.y() - this->grid_origin_y) / this->resolution_ + 0.5 - r2;

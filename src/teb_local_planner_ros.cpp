@@ -222,12 +222,13 @@ void TebLocalPlannerROS::initialize(std::string name, tf2_ros::Buffer* tf, costm
 
 void TebLocalPlannerROS::PredictedCostmapCB(const nav_msgs::OccupancyGrid occupancy_grid)
 { 
-  ROS_WARN_THROTTLE(30, "2D Costmap working!");
+  ROS_WARN("2D Costmap received!");
 
 
   PredictedCostmap tmp; 
   tmp.initialize(occupancy_grid);
   predictions_ = boost::make_shared<PredictedCostmap>(tmp);
+
   // update pointer in planner class. TODO: Not sure why this is necessary....
   planner_->updatePredictedCostmap(predictions_);
 }
@@ -341,8 +342,7 @@ uint32_t TebLocalPlannerROS::computeVelocityCommands(const geometry_msgs::PoseSt
   double dy = global_goal.pose.position.y - robot_pose_.y();
   double delta_orient = g2o::normalize_theta( tf2::getYaw(global_goal.pose.orientation) - robot_pose_.theta() );
   if(fabs(std::sqrt(dx*dx+dy*dy)) < cfg_.goal_tolerance.xy_goal_tolerance
-    && fabs(delta_orient) < cfg_.goal_tolerance.yaw_goal_tolerance
-    && (!cfg_.goal_tolerance.complete_global_plan || via_points_.size() == 0))
+    && fabs(delta_orient) < cfg_.goal_tolerance.yaw_goal_tolerance)
   {
     goal_reached_ = true;
     return mbf_msgs::ExePathResult::SUCCESS;
@@ -1098,6 +1098,7 @@ void TebLocalPlannerROS::customViaPointsCB(const nav_msgs::Path::ConstPtr& via_p
 
   boost::mutex::scoped_lock l(via_point_mutex_);
   via_points_.clear();
+  
   for (const geometry_msgs::PoseStamped& pose : via_points_msg->poses)
   {
     via_points_.emplace_back(pose.pose.position.x, pose.pose.position.y);
