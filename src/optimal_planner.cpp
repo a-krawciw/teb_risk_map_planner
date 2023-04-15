@@ -728,6 +728,12 @@ void TebOptimalPlanner::AddEdgesViaPoints()
 {
   float weight = teb_.getAccumulatedDistance() / 10.0;
 
+  // geometry_msgs::PoseStamped global_goal;
+  // tf2::doTransform(global_plan_.back(), global_goal, tf_plan_to_global);
+  // double dx = global_goal.pose.position.x - robot_pose_.x();
+  // double dy = global_goal.pose.position.y - robot_pose_.y();
+  //float weight = 
+  //float weight = cfg_->optim.weight_viapoint;
   if (cfg_->optim.weight_viapoint==0 || via_points_==NULL || via_points_->empty() || weight < 0.1)
     return; // if weight equals zero skip adding edges!
 

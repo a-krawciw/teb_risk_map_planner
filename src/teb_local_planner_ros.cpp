@@ -347,6 +347,8 @@ uint32_t TebLocalPlannerROS::computeVelocityCommands(const geometry_msgs::PoseSt
     goal_reached_ = true;
     return mbf_msgs::ExePathResult::SUCCESS;
   }
+
+  cfg_.optim.weight_viapoint = std::sqrt(dx*dx+dy*dy) / 10.0;
   
   
   // check if we should enter any backup mode and apply settings
